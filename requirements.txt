@@ -1,0 +1,13 @@
+transformers==4.20.0
+datasets>=2.2.0
+jsonlines
+numpy==1.26.4
+requests>=2.26.0
+scikit_learn==1.2.0
+scipy
+sentence_transformers>=2.2.0
+tqdm
+rich
+h5py==3.8.0
+openai
+huggingface-hub==0.25.2
