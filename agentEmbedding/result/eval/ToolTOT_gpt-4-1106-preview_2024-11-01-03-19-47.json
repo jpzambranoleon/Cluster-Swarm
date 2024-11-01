@@ -1,0 +1,112 @@
+[
+    {
+        "Question": "How do I locate my card?",
+        "GT": "card arrival",
+        "Attempt answer": "Check common places, use mobile/online banking, report lost/stolen.",
+        "Solved": false,
+        "Total solved": 0,
+        "Total executed": 1,
+        "Accuracy": 0.0,
+        "Time": 26.695570468902588,
+        "Total Cost": 0.03766
+    },
+    {
+        "Question": "I still have not received my new card, I ordered over a week ago.",
+        "GT": "card arrival",
+        "Attempt answer": "Contact card issuer.",
+        "Solved": false,
+        "Total solved": 0,
+        "Total executed": 2,
+        "Accuracy": 0.0,
+        "Time": 25.931198358535767,
+        "Total Cost": 0.07872
+    },
+    {
+        "Question": "I ordered a card but it has not arrived. Help please!",
+        "GT": "card arrival",
+        "Attempt answer": "Contact the company for assistance.",
+        "Solved": false,
+        "Total solved": 0,
+        "Total executed": 3,
+        "Accuracy": 0.0,
+        "Time": 15.970526933670044,
+        "Total Cost": 0.11248
+    },
+    {
+        "Question": "Is there a way to know when my card will arrive?",
+        "GT": "card arrival",
+        "Attempt answer": "Contact issuer, check estimated delivery time, use tracking number.",
+        "Solved": false,
+        "Total solved": 0,
+        "Total executed": 4,
+        "Accuracy": 0.0,
+        "Time": 17.66464114189148,
+        "Total Cost": 0.14415999999999998
+    },
+    {
+        "Question": "My card has not arrived yet.",
+        "GT": "card arrival",
+        "Attempt answer": "Check with card issuer or postal service.",
+        "Solved": false,
+        "Total solved": 0,
+        "Total executed": 5,
+        "Accuracy": 0.0,
+        "Time": 21.506990909576416,
+        "Total Cost": 0.17736
+    },
+    {
+        "Question": "When will I get my card?",
+        "GT": "card arrival",
+        "Attempt answer": "Information not provided.",
+        "Solved": false,
+        "Total solved": 0,
+        "Total executed": 6,
+        "Accuracy": 0.0,
+        "Time": 21.376689910888672,
+        "Total Cost": 0.2115
+    },
+    {
+        "Question": "Do you know if there is a tracking number for the new card you sent me?",
+        "GT": "card arrival",
+        "Attempt answer": "Contact card issuer.",
+        "Solved": false,
+        "Total solved": 0,
+        "Total executed": 7,
+        "Accuracy": 0.0,
+        "Time": 20.928173065185547,
+        "Total Cost": 0.24373
+    },
+    {
+        "Question": "i have not received my card",
+        "GT": "card arrival",
+        "Attempt answer": "Contact issuer's customer service.",
+        "Solved": false,
+        "Total solved": 0,
+        "Total executed": 8,
+        "Accuracy": 0.0,
+        "Time": 23.675386667251587,
+        "Total Cost": 0.27888999999999997
+    },
+    {
+        "Question": "still waiting on that card",
+        "GT": "card arrival",
+        "Attempt answer": "Contact issuing authority.",
+        "Solved": false,
+        "Total solved": 0,
+        "Total executed": 9,
+        "Accuracy": 0.0,
+        "Time": 21.76379895210266,
+        "Total Cost": 0.31199
+    },
+    {
+        "Question": "Is it normal to have to wait over a week for my new card?",
+        "GT": "card arrival",
+        "Attempt answer": "Yes",
+        "Solved": false,
+        "Total solved": 0,
+        "Total executed": 10,
+        "Accuracy": 0.0,
+        "Time": 18.09597396850586,
+        "Total Cost": 0.34208
+    }
+]

@@ -1,0 +1,11 @@
+{"task": "banking77", "input": "How do I locate my card?", "label": "card arrival"}
+{"task": "banking77", "input": "I still have not received my new card, I ordered over a week ago.", "label": "card arrival"}
+{"task": "banking77", "input": "I ordered a card but it has not arrived. Help please!", "label": "card arrival"}
+{"task": "banking77", "input": "Is there a way to know when my card will arrive?", "label": "card arrival"}
+{"task": "banking77", "input": "My card has not arrived yet.", "label": "card arrival"}
+{"task": "banking77", "input": "When will I get my card?", "label": "card arrival"}
+{"task": "banking77", "input": "Do you know if there is a tracking number for the new card you sent me?", "label": "card arrival"}
+{"task": "banking77", "input": "i have not received my card", "label": "card arrival"}
+{"task": "banking77", "input": "still waiting on that card", "label": "card arrival"}
+{"task": "banking77", "input": "Is it normal to have to wait over a week for my new card?", "label": "card arrival"}
+
