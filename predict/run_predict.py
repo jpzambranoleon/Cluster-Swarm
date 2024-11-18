@@ -20,7 +20,6 @@ def run_predict_triplet(dataset, link_path, model_name):
     ]
 
     env = os.environ.copy()
-    env["OPENAI_API_KEY"] = "OPENAI_API_KEY"  # Replace with your actual API key
     env["OMP_NUM_THREADS"] = "4"
     env["MKL_NUM_THREADS"] = "4"
 
@@ -32,7 +31,7 @@ def run_predict_triplet(dataset, link_path, model_name):
 
 def main():
     datasets = ["banking77"]
-    model_name = "gpt-4o-mini"
+    model_name = "gpt-4o"
     #temperature = 0
 
     for dataset in datasets:
