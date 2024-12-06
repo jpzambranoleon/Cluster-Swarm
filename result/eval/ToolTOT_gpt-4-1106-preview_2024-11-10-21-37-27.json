@@ -1,0 +1,13 @@
+[
+    {
+        "Question": "Query: Is there a reason that the ATM declined my transaction?\nChoice 1: How come I can't take money out of the ATM?\nChoice 2: My transfer got declined.\nChoice",
+        "GT": " 1",
+        "Attempt answer": "Choice 1",
+        "Solved": false,
+        "Total solved": 0,
+        "Total executed": 1,
+        "Accuracy": 0.0,
+        "Time": 7.373653411865234,
+        "Total Cost": 0.0102
+    }
+]

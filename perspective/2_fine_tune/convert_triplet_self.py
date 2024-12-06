@@ -14,8 +14,6 @@ parser.add_argument("--output_path", default=None, type=str)
 parser.add_argument("--data_path", default=None, type=str)
 args = parser.parse_args()
 
-os.makedirs("converted_triplet_results", exist_ok=True)
-
 with open(args.pred_path, 'r') as f:
     pred_data = json.load(f)
 
