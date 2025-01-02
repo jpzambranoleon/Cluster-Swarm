@@ -1,0 +1,16 @@
+{"task": "banking77", "input": "How do I locate my card?", "label": "card arrival"}
+{"task": "banking77", "input": "I still have not received my new card, I ordered over a week ago.", "label": "card arrival"}
+{"task": "banking77", "input": "I ordered a card but it has not arrived. Help please!", "label": "card arrival"}
+{"task": "banking77", "input": "Is there a way to know when my card will arrive?", "label": "card arrival"}
+{"task": "banking77", "input": "Why won't my card show up on the app?", "label": "card linking"}
+{"task": "banking77", "input": "I would like to reactivate my card.", "label": "card linking"}
+{"task": "banking77", "input": "Where do I link the new card?", "label": "card linking"}
+{"task": "banking77", "input": "I have received my card, can you help me put it in the app?", "label": "card linking"}
+{"task": "banking77", "input": "I need to know your exchange rates.", "label": "exchange rate"}
+{"task": "banking77", "input": "What exchange rates do you offer?", "label": "exchange rate"}
+{"task": "banking77", "input": "How did you come up with your exchange rates?", "label": "exchange rate"}
+{"task": "banking77", "input": "Where do you guys acquire your exchange rate?", "label": "exchange rate"}
+{"task": "banking77", "input": "I purchased something in a foreign currency but the rate applied is wrong", "label": "card payment wrong exchange rate"}
+{"task": "banking77", "input": "I made a currency exchange and think I was charged more than I should of been.", "label": "card payment wrong exchange rate"}
+{"task": "banking77", "input": "the card payment exchange rate is wrong", "label": "card payment wrong exchange rate"}
+{"task": "banking77", "input": "The exchange rate was wrong when I bought something outside the country.", "label": "card payment wrong exchange rate"}
