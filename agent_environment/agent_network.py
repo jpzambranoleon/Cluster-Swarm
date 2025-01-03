@@ -13,7 +13,6 @@ from torch.utils.data import DataLoader
 from datasets import Dataset
 from transformers import pipeline, AutoModel, AutoTokenizer, DataCollatorWithPadding, PreTrainedTokenizerFast, BatchEncoding
 from transformers.modeling_outputs import BaseModelOutput
-from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Optional
 
 from e5_utils import logger, pool, move_to_cuda
@@ -25,15 +24,6 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.ensemble import IsolationForest
 from sklearn.cluster import DBSCAN
 from scipy.optimize import linear_sum_assignment
-
-
-from swarm.graph.swarm import Swarm
-from swarm.environment.tools.reader.readers import JSONReader, YAMLReader
-from swarm.environment.agents.gaia.tool_tot import ToolTOT
-from swarm.environment.domain.gaia import question_scorer
-from swarm.utils.globals import Time, Cost
-from swarm.utils.const import GPTSWARM_ROOT
-from swarm.utils.log import initialize_log_file, swarmlog
 
 
 def _transform_func(tokenizer: PreTrainedTokenizerFast, examples: Dict[str, List], prompt=None) -> BatchEncoding:
