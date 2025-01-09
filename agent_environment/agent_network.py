@@ -1,10 +1,7 @@
+import openai
 import os
+from dotenv import load_dotenv
 import torch
-import json
-import h5py
-import yaml
-from pathlib import Path
-import time
 import numpy as np
 import tqdm
 from functools import partial
@@ -16,6 +13,7 @@ from transformers.modeling_outputs import BaseModelOutput
 from typing import List, Dict, Optional
 
 from e5_utils import logger, pool, move_to_cuda
+from sklearn.preprocessing import normalize
 from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.metrics import normalized_mutual_info_score
 from sklearn.metrics import adjusted_rand_score
@@ -24,6 +22,8 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.ensemble import IsolationForest
 from sklearn.cluster import DBSCAN
 from scipy.optimize import linear_sum_assignment
+from sklearn.metrics import pairwise_distances
+from scipy.spatial.distance import cosine
 
 
 def _transform_func(tokenizer: PreTrainedTokenizerFast, examples: Dict[str, List], prompt=None) -> BatchEncoding:
@@ -211,131 +211,115 @@ class SummarizationAgent:
         device = 0 if torch.cuda.is_available() else -1
         self.summarizer = pipeline("summarization", model=model_name_or_path, device=device)
 
-    def generate_summaries(self, clusters: dict, texts: list, max_length=50, min_length=20) -> dict:
+    def generate_summaries(self, cluster_texts: list, max_length=100, min_length=50) -> list:
         """
         Generates textual summaries for each cluster.
         
         Parameters:
-            clusters (dict): Mapping of cluster IDs to indices of associated texts.
-            texts (list): List of text data corresponding to embeddings.
+            cluster_texts (list): List of concatenated texts for each cluster.
             max_length (int): Maximum length of generated summaries.
             min_length (int): Minimum length of generated summaries.
         
         Returns:
-            summaries (dict): Mapping of cluster IDs to their summaries.
+            list: A list of summaries corresponding to the input cluster texts.
         """
-        summaries = {}
-        for cluster_id, indices in clusters.items():
-            cluster_texts = [texts[i] for i in indices]
-            concatenated_text = " ".join(cluster_texts)
-            # Generate a summary with parameters to reduce redundancy
+        summaries = []
+        for text in cluster_texts:
+            # Ensure text has enough content to summarize meaningfully
+            if len(text.split()) < min_length:
+                text = f"{text} {text}"  # Duplicate text for more content
+
+            # Generate the summary
             summary = self.summarizer(
-                concatenated_text,
+                text,
                 max_length=max_length,
                 min_length=min_length,
                 truncation=True,
                 clean_up_tokenization_spaces=True,
             )[0]['summary_text']
-            summaries[cluster_id] = summary
+            summaries.append(summary)
         return summaries
 
-    def generate_summary_embeddings(self, summaries: dict, encoder_agent: EncoderAgent) -> np.ndarray:
-        """
-        Generates embeddings for the textual summaries.
-        
-        Parameters:
-            summaries (dict): Mapping of cluster IDs to summaries.
-            encoder_agent (EncoderAgent): Pre-trained encoder agent for embeddings.
-        
-        Returns:
-            summary_embeddings (np.ndarray): Embeddings for the summaries.
-        """
-        summary_texts = list(summaries.values())
-        summary_embeddings = encoder_agent.encode(summary_texts)
-        return summary_embeddings
-
 class AnomalyDetectionAgent:
-    def __init__(self, n_neighbors=5, threshold_percentile=95):
+    def __init__(self, method="knn", n_neighbors=5, contamination=0.05):
         """
-        Initialize the Anomaly Detection Agent using KNN.
-        
+        Initializes the Anomaly Detection Agent.
+
         Parameters:
-        - n_neighbors: int, number of neighbors for KNN.
-        - threshold_percentile: float, percentile to define anomaly threshold.
+            method (str): Algorithm for anomaly detection ('knn' or 'unsupervised').
+            n_neighbors (int): Number of neighbors for K-NN anomaly detection.
+            contamination (float): Expected proportion of anomalies (used in unsupervised methods).
         """
+        self.method = method
         self.n_neighbors = n_neighbors
-        self.threshold_percentile = threshold_percentile
+        self.contamination = contamination
 
-    def detect_anomalies(self, summary_embeddings, cluster_embeddings):
+    def detect_anomalies_knn(self, embeddings):
         """
-        Detect anomalies by comparing summary embeddings with cluster embeddings.
-        
-        Parameters:
-        - summary_embeddings: np.ndarray, embeddings of the summarized clusters.
-        - cluster_embeddings: np.ndarray, embeddings of the original clusters.
-        
-        Returns:
-        - anomalies: dict, mapping of anomaly type to indices:
-            - 'summary_anomalies': anomalies within summary embeddings.
-            - 'cluster_anomalies': anomalies within cluster embeddings.
-        - scores: dict, containing scores for both summary and cluster embeddings.
-        """
-        summary_anomalies, summary_scores = self._knn_anomaly_detection(summary_embeddings)
-        cluster_anomalies, cluster_scores = self._knn_anomaly_detection(cluster_embeddings)
-        
-        return {
-            'summary_anomalies': summary_anomalies,
-            'cluster_anomalies': cluster_anomalies
-        }, {
-            'summary_scores': summary_scores,
-            'cluster_scores': cluster_scores
-        }
+        Detects anomalies using K-Nearest Neighbors (K-NN).
 
-    def _knn_anomaly_detection(self, embeddings):
-        """
-        Anomaly detection using KNN on given embeddings.
-        
         Parameters:
-        - embeddings: np.ndarray, embeddings to analyze.
-        
+            embeddings (np.array): Input embeddings (e.g., cluster or summary embeddings).
+
         Returns:
-        - anomalies: np.ndarray, indices of flagged anomalies.
-        - scores: np.ndarray, average KNN distances (anomaly scores).
+            np.array: Anomaly scores for each embedding.
         """
-        # Fit KNN model
-        nbrs = NearestNeighbors(n_neighbors=self.n_neighbors + 1).fit(embeddings)
+        nbrs = NearestNeighbors(n_neighbors=self.n_neighbors, metric="cosine").fit(embeddings)
         distances, _ = nbrs.kneighbors(embeddings)
+        # Use the mean distance to neighbors as the anomaly score
+        anomaly_scores = distances.mean(axis=1)
+        return anomaly_scores
 
-        # Compute average distance to neighbors (excluding self-distance)
-        mean_distances = distances[:, 1:].mean(axis=1)
-        
-        # Calculate threshold for anomalies based on percentile
-        threshold = np.percentile(mean_distances, self.threshold_percentile)
-        anomalies = np.where(mean_distances > threshold)[0]
-
-        return anomalies, mean_distances
-
-    def refine_anomalies(self, feedback, embeddings):
+    def detect_anomalies_unsupervised(self, embeddings):
         """
-        Refine detected anomalies using feedback data.
-        
+        Detects anomalies using an unsupervised distance-based method.
+
         Parameters:
-        - feedback: dict, contains information for refinement (e.g., confirmed anomalies).
-        - embeddings: np.ndarray, embeddings to re-evaluate.
-        
+            embeddings (np.array): Input embeddings.
+
         Returns:
-        - refined_anomalies: np.ndarray, updated anomaly indices.
-        - refined_scores: np.ndarray, updated anomaly scores.
+            np.array: Anomaly scores for each embedding.
         """
-        # Optionally implement additional logic here based on feedback
-        anomalies, scores = self._knn_anomaly_detection(embeddings)
-        return anomalies, scores
+        pairwise_dists = pairwise_distances(embeddings, metric="cosine")
+        # Compute anomaly score as the average distance to all other points
+        anomaly_scores = pairwise_dists.mean(axis=1)
+        return anomaly_scores
+
+    def detect_anomalies(self, cluster_embeddings, summary_embeddings):
+        """
+        Detects anomalies based on the specified method.
+
+        Parameters:
+            cluster_embeddings (np.array): Cluster-level embeddings.
+            summary_embeddings (np.array): Summary-level embeddings.
+
+        Returns:
+            list: Embeddings of detected anomalies.
+        """
+        # Combine cluster and summary embeddings for joint anomaly detection
+        embeddings = np.vstack([cluster_embeddings, summary_embeddings])
+
+        if self.method == "knn":
+            anomaly_scores = self.detect_anomalies_knn(embeddings)
+        else:
+            anomaly_scores = self.detect_anomalies_unsupervised(embeddings)
+
+        # Normalize scores to range [0, 1]
+        normalized_scores = (anomaly_scores - anomaly_scores.min()) / (anomaly_scores.max() - anomaly_scores.min())
+
+        # Determine the anomaly threshold
+        threshold = np.percentile(normalized_scores, 100 * (1 - self.contamination))
+
+        # Extract embeddings corresponding to significant anomalies
+        anomalies = embeddings[normalized_scores >= threshold]
+
+        return anomalies
 
 class RepresentativeSamplingAgent:
     def __init__(self, sampling_strategy: str = "diversity", top_k: int = 10):
         """
         Initializes the RepresentativeSamplingAgent with a specified sampling strategy.
-        
+
         Args:
             sampling_strategy (str): Strategy for selecting anomalies ("diversity" or "uncertainty").
             top_k (int): Number of anomalies to select.
@@ -346,13 +330,16 @@ class RepresentativeSamplingAgent:
     def _select_by_diversity(self, anomalies: List[List[float]]) -> List[int]:
         """
         Selects the most diverse anomalies using cosine similarity.
-        
+
         Args:
             anomalies (List[List[float]]): Embeddings of anomalies.
-        
+
         Returns:
             List[int]: Indices of selected anomalies.
         """
+        if not anomalies:
+            return []
+
         selected_indices = []
         remaining_indices = list(range(len(anomalies)))
         embeddings = np.array(anomalies)
@@ -361,7 +348,7 @@ class RepresentativeSamplingAgent:
         if remaining_indices:
             selected_indices.append(remaining_indices.pop(0))
 
-        while len(selected_indices) < self.top_k and remaining_indices:
+        while len(selected_indices) < min(self.top_k, len(embeddings)) and remaining_indices:
             # Calculate pairwise cosine similarity
             selected_embeddings = embeddings[selected_indices]
             remaining_embeddings = embeddings[remaining_indices]
@@ -378,31 +365,35 @@ class RepresentativeSamplingAgent:
     def _select_by_uncertainty(self, anomalies: List[Dict], feedback_scores: List[float]) -> List[int]:
         """
         Selects anomalies with the highest uncertainty scores.
-        
+
         Args:
             anomalies (List[Dict]): List of anomalies with associated data.
             feedback_scores (List[float]): Uncertainty scores from feedback.
-        
+
         Returns:
             List[int]: Indices of selected anomalies.
         """
-        sorted_indices = np.argsort(feedback_scores)[-self.top_k:]
+        if not feedback_scores or not anomalies:
+            return []
+
+        top_k = min(self.top_k, len(feedback_scores))
+        sorted_indices = np.argsort(feedback_scores)[-top_k:]
         return sorted_indices.tolist()
 
     def sample_anomalies(
         self,
         anomalies: List[Dict],
         feedback: Optional[List[float]] = None,
-        embeddings_key: str = "embedding"
+        embeddings_key: str = "embedding",
     ) -> List[Dict]:
         """
         Selects the most informative anomalies based on the sampling strategy.
-        
+
         Args:
             anomalies (List[Dict]): List of anomalies, each represented as a dictionary with relevant fields.
             feedback (Optional[List[float]]): Feedback scores for uncertainty-based sampling.
             embeddings_key (str): Key to access embeddings in anomaly dictionaries.
-        
+
         Returns:
             List[Dict]: List of selected anomalies.
         """
@@ -418,5 +409,55 @@ class RepresentativeSamplingAgent:
             raise ValueError(f"Invalid sampling strategy or missing feedback for strategy '{self.sampling_strategy}'.")
 
         return [anomalies[i] for i in selected_indices]
+    
+class NovelClassNamingAgent:
+    def __init__(self):
+        """
+        Initializes the Novel Class Naming Agent with GPT API.
+        """
+
+        load_dotenv()
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+
+    def name_novel_classes(self, novel_classes, summaries):
+        """
+        Assigns names to novel classes using GPT API.
+
+        Args:
+            novel_classes (list[dict]): Novel classes to be named, each with a "text" key.
+            summaries (list[str]): Summaries for context, one for each novel class.
+
+        Returns:
+            list[dict]: Novel classes with assigned names.
+        """
+        named_classes = []
+
+        for idx, novel_class in enumerate(novel_classes):
+            anomaly_text = novel_class.get("text", "No text provided.")
+            summary_text = summaries[idx]
+            prompt = (
+                f"You are tasked with naming a new category of data anomalies. "
+                f"The following anomaly was detected: '{anomaly_text}'. "
+                f"The summary of this anomaly is: '{summary_text}'. "
+                "Please assign a meaningful and concise name to this novel class."
+            )
+
+            print(f"GPT prompt for naming novel class: {prompt}")  # Debugging line to see the prompt
+
+            try:
+                response = openai.chat.completions.create(
+                    model="gpt-4",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=50,
+                    temperature=0.7,
+                )
+                name = response.choices[0].message.content.strip()
+                print(f"Generated name: {name}")  # Debugging line to see the response
+                named_classes.append({"class": novel_class, "name": name})
+            except Exception as e:
+                print(f"Error generating name for novel class: {e}")
+                named_classes.append({"class": novel_class, "name": "Error generating name"})
+
+        return named_classes
         
 
