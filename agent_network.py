@@ -426,34 +426,23 @@ class NovelClassNamingAgent:
         self.similarity_threshold = similarity_threshold
 
     def classify_anomalies(self, informative_anomalies, cluster_embeddings):
-        """
-        Determines whether anomalies belong to existing clusters or are novel.
-
-        Args:
-            informative_anomalies (np.array): Embeddings of selected anomalies.
-            cluster_embeddings (np.array): Embeddings of existing clusters.
-
-        Returns:
-            list of tuples: Each anomaly gets a (label, assigned_cluster_index).
-        """
         labels = []
         for i, anomaly in enumerate(informative_anomalies):
             similarities = cosine_similarity([anomaly], cluster_embeddings)[0]
             max_similarity = np.max(similarities) if similarities.size > 0 else 0
             best_cluster_idx = np.argmax(similarities) if similarities.size > 0 else None
 
-            second_max_similarity = np.partition(similarities, -2)[-2] if len(similarities) > 1 else 0
-
             print(f"\n🔍 **Anomaly {i}**")
             print(f"Similarity Scores: {similarities}")
-            print(f"Max Similarity: {max_similarity} (Threshold: {self.similarity_threshold})")
-            print(f"Best Matching Cluster: {best_cluster_idx if max_similarity >= self.similarity_threshold else 'None'}")
+            print(f"Max Similarity: {max_similarity:.4f} (Threshold: {self.similarity_threshold})")
+            print(f"Best Matching Cluster: {best_cluster_idx} (🔍 Reference Only)")
 
-            # Ensure the difference between the two highest similarities is significant
-            if max_similarity >= self.similarity_threshold and (max_similarity - second_max_similarity) > 0.1:
+            if max_similarity >= self.similarity_threshold:
                 labels.append(("existing_cluster", best_cluster_idx))
+                print(f"✅ Assigned to Cluster: {best_cluster_idx}")
             else:
                 labels.append(("novel_class", None))
+                print(f"🚀 Identified as a **Novel Class** (Best Match: {best_cluster_idx}, but similarity too low)")
 
         return labels
     
